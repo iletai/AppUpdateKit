@@ -75,7 +75,11 @@ public struct AppUpdateCardView: View {
             VStack(spacing: 12) {
                 if let storeURL = action.storeURL {
                     Button(action: {
-                        onAction?(.update(url: storeURL))
+                        if let customID = action.customID {
+                            onAction?(.custom(id: customID))
+                        } else {
+                            onAction?(.update(url: storeURL))
+                        }
                         openURL(storeURL)
                     }) {
                         Text(configuration.updateButtonTitle)

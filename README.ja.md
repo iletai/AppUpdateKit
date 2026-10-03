@@ -4,36 +4,36 @@
 
 <p align="center">
   <a href="https://github.com/iletai/AppUpdateKit/actions"><img src="https://github.com/iletai/AppUpdateKit/workflows/Swift%20CI/badge.svg" alt="CI Status"></a>
-  <img src="https://img.shields.io/badge/Swift-5.9%20%7C%206.0-orange.svg" alt="Swift Version">
-  <img src="https://img.shields.io/badge/Platforms-iOS%2014+%20%7C%20macOS%2011+%20%7C%20watchOS%207+%20%7C%20tvOS%2014+%20%7C%20Linux-blue.svg" alt="Platforms">
-  <img src="https://img.shields.io/badge/Dependencies-0%20Zero-green.svg" alt="Zero Dependencies">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-black.svg" alt="License"></a>
+  <img src="https://img.shields.io/badge/Swift-5.9%20%7C%206.0-orange.svg" alt="Swift バージョン">
+  <img src="https://img.shields.io/badge/Platforms-iOS%2014+%20%7C%20macOS%2011+%20%7C%20watchOS%207+%20%7C%20tvOS%2014+%20%7C%20Linux-blue.svg" alt="対応プラットフォーム">
+  <img src="https://img.shields.io/badge/Dependencies-0%20Zero-green.svg" alt="外部依存関係ゼロ">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-black.svg" alt="ライセンス"></a>
 </p>
 
 <p align="center">
   🌐 <b>Language Selection / Chọn ngôn ngữ / 言語選択:</b><br/>
-  <b>🇬🇧 English</b> &nbsp;|&nbsp;
+  <a href="README.md">🇬🇧 English</a> &nbsp;|&nbsp;
   <a href="README.vi.md">🇻🇳 Tiếng Việt</a> &nbsp;|&nbsp;
-  <a href="README.ja.md">🇯🇵 日本語</a>
+  <b>🇯🇵 日本語</b>
 </p>
 
 ---
 
 # AppUpdateKit
 
-**AppUpdateKit** is an ultra-lightweight, zero-dependency, **headless-first** Swift Package for evaluating app versions, enforcing **Force Updates**, presenting **Optional Updates** (with release notes), and activating **Maintenance Mode** remotely via **microCMS**, **Raw JSON (GitHub Raw, S3, Cloudflare Workers)**, or any backend endpoint.
+**AppUpdateKit** は、完全な **Headless-First** 設計を採用した超軽量・依存関係ゼロ（Zero Dependency）の Swift Package です。**microCMS** や **Raw JSON (GitHub Raw, S3, Cloudflare Workers)** などを介して、アプリの強制アップデート（Force Update）、任意アップデート（Optional Update・更新履歴付き）、およびメンテナンスモード（Maintenance Mode）をリモートで制御します。
 
-### 🛡️ Core Values & Design Principles
-- **100% Headless-First (UI is strictly optional):** AppUpdateKit is built as a pure business logic engine (`AppUpdateChecker`, `AppUpdateEvaluator`, `AppVersion`, `AppUpdateConfig`). You are **never forced to use our UI**. All raw models, metadata, version objects, and event streams are exposed so you can render your own custom dialogs, sheets, or bridges (React Native, Flutter).
-- **Zero Third-Party Dependencies:** Pure Swift Standard Library (`Foundation`, `SwiftUI`, `Combine`, `UIKit`).
-- **O(N) SemVer Normalizer:** Vector integer comparator (`"1.2"` == `"1.2.0"` == `"1.2.0.0"`, `"1.10.0"` > `"1.2.0"`), stripping prerelease tags and build metadata.
-- **Fail-Safe by Default:** Network errors, timeouts, or corrupt JSON gracefully fallback to `.none` without crashing or blocking users.
-- **Full Lifecycle Events & Analytics:** Emits granular events (`checkStarted`, `configFetched`, `evaluated`, `presented`, `userAction`, `checkFailed`) for Firebase, Mixpanel, and custom logging.
-- **Swift 6 & Sendable Compliant:** Fully concurrency-safe with `@MainActor` safety and Task deduplication.
+### 🌟 主な特徴 & 設計思想
+- **完全な Headless 設計（UI の強制なし）:** 純粋なビジネスロジックエンジン (`AppUpdateChecker`, `AppUpdateEvaluator`, `AppVersion`, `AppUpdateConfig`) を提供します。標準 UI の使用は強制されません。生のモデル、メタデータ、バージョンオブジェクト、イベントストリームがすべて公開されているため、独自のカスタム UI、モーダル、または React Native / Flutter ブリッジを自由に構築できます。
+- **外部依存性ゼロ:** Apple 標準フレームワーク (`Foundation`, `SwiftUI`, `Combine`, `UIKit`) のみで動作。
+- **O(N) SemVer 比較エンジン:** バージョン文字列の正規化 (`"1.2"` == `"1.2.0"` == `"1.2.0.0"`, `"1.10.0"` > `"1.2.0"`) およびプレリリースタグ・ビルドメタデータの自動除去に対応。
+- **フェイルセーフ設計:** ネットワークエラー、タイムアウト、または不正な JSON が発生した場合でも、クラッシュせずに `.none` へ安全にフォールバック。
+- **詳細なイベント＆アナリティクス対応:** `checkStarted`, `configFetched`, `evaluated`, `presented`, `userAction`, `checkFailed` を出力し、Firebase や Mixpanel と連携可能。
+- **Swift 6 & Sendable 完全対応:** `@MainActor` の安全性と Task 重複排除を備えた完全なスレッドセーフ設計。
 
 ---
 
-## 📱 Visual UI Preview
+## 📱 UI プレビュー
 
 ```
 ┌────────────────────────────────────────┐       ┌────────────────────────────────────────┐
@@ -58,9 +58,9 @@
 
 ---
 
-## 🚀 Quick Start (100% Headless / Custom UI)
+## 🚀 クイックスタート (100% Headless / カスタム UI)
 
-Use pure evaluation logic without touching any UI code:
+UI コードを使用せず、純粋な判定ロジックのみを使用する例:
 
 ```swift
 import AppUpdateKit
@@ -70,7 +70,7 @@ let fetcher = AppUpdateFetcher.microCMS(
     apiKey: "YOUR_API_KEY"
 )
 
-// Check update status asynchronously (fail-safe)
+// 非同期でアップデート状態をチェック（フェイルセーフ対応）
 let action: AppUpdateAction = await AppUpdateChecker.check(
     onEvent: { event in
         Analytics.logEvent("app_update_lifecycle", parameters: ["event": "\(event)"])
@@ -78,10 +78,10 @@ let action: AppUpdateAction = await AppUpdateChecker.check(
     fetcher: fetcher
 )
 
-// Handle action in your own custom View, Modal, or Coordinator
+// 独自の View、モーダル、または Coordinator でアクションを処理
 switch action {
 case .none:
-    print("App is up-to-date")
+    print("アプリは最新バージョンです")
 case .optionalUpdate(let title, let message, let storeURL, let version, let releaseNotes, let metadata):
     MyCustomDialogPresenter.showOptionalUpdate(title: title, version: version?.description, url: storeURL)
 case .forceUpdate(let title, let message, let storeURL, let version, let releaseNotes, let metadata):
@@ -95,16 +95,16 @@ case .custom(let id, let title, let message, let storeURL, _, _, _):
 
 ---
 
-## 🎨 Optional Pre-built UI Modifiers
+## 🎨 組み込み UI モディファイア（任意）
 
-### 1. SwiftUI Native Alert
+### 1. SwiftUI 標準アラート
 ```swift
 ContentView()
     .appUpdateAlert(
         action: $updateAction,
         configuration: AppUpdateUIConfiguration(
-            updateButtonTitle: "Update Now",
-            laterButtonTitle: "Later",
+            updateButtonTitle: "今すぐ更新",
+            laterButtonTitle: "後で",
             dismissButtonTitle: "OK"
         ),
         onEvent: { event in
@@ -113,7 +113,7 @@ ContentView()
     )
 ```
 
-### 2. SwiftUI Custom Card Sheet
+### 2. SwiftUI カスタムカードシート
 ```swift
 ContentView()
     .appUpdateSheet(
@@ -127,7 +127,7 @@ ContentView()
     )
 ```
 
-### 3. UIKit Integration (`UIViewController`)
+### 3. UIKit との連携 (`UIViewController`)
 ```swift
 class ViewController: UIViewController {
     func checkVersion() {
@@ -141,34 +141,34 @@ class ViewController: UIViewController {
 
 ---
 
-## 📊 Semantic Versioning Comparison Matrix
+## 📊 Semantic Versioning 判定マトリクス
 
-| Current Version | Remote Minimum | Remote Latest | Evaluated Action | Application Behavior |
+| 現在のバージョン | リモート最小必須 | リモート最新 | 判定アクション | アプリの挙動 |
 | :--- | :--- | :--- | :--- | :--- |
-| `1.0.0` | `2.0.0` | `2.5.0` | `.forceUpdate` | 🚨 Blocking update required to proceed |
-| `2.0.0` | `1.5.0` | `2.1.0` | `.optionalUpdate` | 💡 Show update prompt (with "Later" button) |
-| `2.1.0` | `1.5.0` | `2.1.0` | `.none` | ✅ App is on latest version |
-| `2.1.0.0` | `1.5.0` | `2.1` | `.none` | ✅ Vector-normalized match |
-| `any` | `any` | `any` (`is_maintenance: true`) | `.maintenance` | 🛠️ Lock app, show maintenance screen |
-| `1.0.0` | Network Error (404/500/Timeout) | N/A | `.none` | 🛡️ Fail-safe: app functions normally |
+| `1.0.0` | `2.0.0` | `2.5.0` | `.forceUpdate` | 🚨 強制アップデートダイアログ（操作ブロック） |
+| `2.0.0` | `1.5.0` | `2.1.0` | `.optionalUpdate` | 💡 任意アップデートダイアログ（「後で」ボタンあり） |
+| `2.1.0` | `1.5.0` | `2.1.0` | `.none` | ✅ アプリは最新 |
+| `2.1.0.0` | `1.5.0` | `2.1` | `.none` | ✅ 正規化による一致判定 |
+| `任意` | `任意` | `任意` (`is_maintenance: true`) | `.maintenance` | 🛠️ アプリをロック、メンテナンス画面を表示 |
+| `1.0.0` | 通信エラー (404/500/Timeout) | N/A | `.none` | 🛡️ フェイルセーフ: 通常通り起動 |
 
 ---
 
-## 🛠️ microCMS API Schema
+## 🛠️ microCMS API スキーマ設定
 
-| Field ID | Display Name | Type | Description |
+| フィールド ID | 表示名 | 種類 | 説明 |
 | :--- | :--- | :--- | :--- |
-| `minimum_version` | Minimum Version | Text | Versions below this trigger force update |
-| `latest_version` | Latest Version | Text | Current latest version on App Store |
-| `store_url` | Store URL | Text | App Store or TestFlight link |
-| `is_maintenance` | Is Maintenance | Boolean | System maintenance toggle flag |
-| `title` | Title | Text (Optional) | Custom dialog title |
-| `message` | Message | Multi-line Text (Optional) | Custom explanation message |
-| `release_notes` | Release Notes | Multi-line Text / Array | Bullet list of release notes |
+| `minimum_version` | 最低必須バージョン | テキスト | これ未満のバージョンで強制アップデートを発火 |
+| `latest_version` | 最新バージョン | テキスト | App Store で公開中の最新バージョン |
+| `store_url` | ストア URL | テキスト | App Store または TestFlight のリンク |
+| `is_maintenance` | メンテナンス中 | 真偽値 | メンテナンスモードの切り替えフラグ |
+| `title` | ダイアログタイトル | テキスト (任意) | カスタムタイトル |
+| `message` | ダイアログ本文 | 複数行テキスト (任意) | カスタム説明文 |
+| `release_notes` | 更新内容 | 複数行テキスト / リスト | 箇条書きのリリースノート |
 
 ---
 
-## 📦 Installation (SPM)
+## 📦 インストール方法 (SPM)
 
 ```swift
 dependencies: [
@@ -176,6 +176,6 @@ dependencies: [
 ]
 ```
 
-## 📄 License
+## 📄 ライセンス
 
-AppUpdateKit is released under the **MIT License**. Copyright (c) 2026 iletai.
+AppUpdateKit は **MIT ライセンス** の下で公開されています。Copyright (c) 2026 iletai.

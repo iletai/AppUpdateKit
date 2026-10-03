@@ -22,7 +22,7 @@ final class AppUpdateCheckerTests: XCTestCase {
         let config = AppUpdateConfig(isMaintenance: true)
         let action = AppUpdateChecker.evaluate(currentVersion: "1.0.0", config: config)
 
-        if case .maintenance(let title, let message) = action {
+        if case .maintenance(let title, let message, _) = action {
             XCTAssertFalse(title.isEmpty)
             XCTAssertFalse(message.isEmpty)
         } else {
@@ -41,7 +41,12 @@ final class AppUpdateCheckerTests: XCTestCase {
         )
 
         let action = AppUpdateChecker.evaluate(currentVersion: "1.9.0", config: config)
-        XCTAssertEqual(action, .forceUpdate(title: "Required Update", message: "Please upgrade", storeURL: testURL))
+        XCTAssertEqual(action, .forceUpdate(
+            title: "Required Update",
+            message: "Please upgrade",
+            storeURL: testURL,
+            version: AppVersion("2.5.0")
+        ))
     }
 
     func testEvaluateOptionalUpdate() {
@@ -55,7 +60,12 @@ final class AppUpdateCheckerTests: XCTestCase {
         )
 
         let action = AppUpdateChecker.evaluate(currentVersion: "1.5.0", config: config)
-        XCTAssertEqual(action, .optionalUpdate(title: "New Features", message: "Check out version 2.0", storeURL: testURL))
+        XCTAssertEqual(action, .optionalUpdate(
+            title: "New Features",
+            message: "Check out version 2.0",
+            storeURL: testURL,
+            version: AppVersion("2.0.0")
+        ))
     }
 
     func testEvaluateUpToDateReturnsNone() {
@@ -89,7 +99,8 @@ final class AppUpdateCheckerTests: XCTestCase {
         XCTAssertEqual(action, .forceUpdate(
             title: "Update Required",
             message: "A new version of the app is available. Please update to continue.",
-            storeURL: fallbackURL
+            storeURL: fallbackURL,
+            version: AppVersion("2.0.0")
         ))
     }
 
@@ -107,7 +118,8 @@ final class AppUpdateCheckerTests: XCTestCase {
         XCTAssertEqual(action, .forceUpdate(
             title: "Update Required",
             message: "A new version of the app is available. Please update to continue.",
-            storeURL: testURL
+            storeURL: testURL,
+            version: AppVersion("2.0.0")
         ))
     }
 

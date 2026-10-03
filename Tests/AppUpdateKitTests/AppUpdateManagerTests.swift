@@ -36,9 +36,11 @@ final class AppUpdateManagerTests: XCTestCase {
         XCTAssertEqual(action, .optionalUpdate(
             title: "Update Available",
             message: "A new version of the app is available. Would you like to update now?",
-            storeURL: testURL
+            storeURL: testURL,
+            version: AppVersion("2.0.0")
         ))
         XCTAssertEqual(manager.currentAction, action)
+        XCTAssertEqual(manager.latestConfig, config)
         XCTAssertFalse(manager.isChecking)
         XCTAssertNotNil(manager.lastCheckDate)
 
@@ -61,20 +63,24 @@ final class AppUpdateManagerTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suiteName)!
         let manager = AppUpdateManager(userDefaults: defaults)
 
+        final class CounterBox: @unchecked Sendable {
+            var count = 0
+        }
+        let box = CounterBox()
+
         let config = AppUpdateConfig(minimumVersion: "2.0.0", storeURL: testURL)
-        var fetchCount = 0
 
         _ = await manager.check(policy: .oncePerSession, currentVersion: "1.0.0") {
-            fetchCount += 1
+            box.count += 1
             return config
         }
-        XCTAssertEqual(fetchCount, 1)
+        XCTAssertEqual(box.count, 1)
 
         // Second check with oncePerSession policy should not invoke fetcher
         _ = await manager.check(policy: .oncePerSession, currentVersion: "1.0.0") {
-            fetchCount += 1
+            box.count += 1
             return config
         }
-        XCTAssertEqual(fetchCount, 1)
+        XCTAssertEqual(box.count, 1)
     }
 }
