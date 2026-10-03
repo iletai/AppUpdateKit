@@ -25,7 +25,7 @@ public enum AppUpdatePresenter {
         case .none:
             return
 
-        case .optionalUpdate(_, _, let storeURL, _):
+        case .optionalUpdate(_, _, let storeURL, _, _, _):
             alert.addAction(UIAlertAction(title: configuration.laterButtonTitle, style: .cancel) { _ in
                 onEvent?(.userAction(action: action, choice: .remindLater))
                 completion?()
@@ -36,11 +36,10 @@ public enum AppUpdatePresenter {
                 completion?()
             })
 
-        case .forceUpdate(_, _, let storeURL, _):
+        case .forceUpdate(_, _, let storeURL, _, _, _):
             alert.addAction(UIAlertAction(title: configuration.updateButtonTitle, style: .default) { _ in
                 onEvent?(.userAction(action: action, choice: .update(url: storeURL)))
                 UIApplication.shared.open(storeURL)
-                // Force update does not complete/dismiss, re-present if needed
             })
 
         case .maintenance:
@@ -48,6 +47,24 @@ public enum AppUpdatePresenter {
                 onEvent?(.userAction(action: action, choice: .dismiss))
                 completion?()
             })
+
+        case .custom(let id, _, _, let storeURL, _, _, _):
+            if let storeURL = storeURL {
+                alert.addAction(UIAlertAction(title: configuration.laterButtonTitle, style: .cancel) { _ in
+                    onEvent?(.userAction(action: action, choice: .dismiss))
+                    completion?()
+                })
+                alert.addAction(UIAlertAction(title: configuration.updateButtonTitle, style: .default) { _ in
+                    onEvent?(.userAction(action: action, choice: .custom(id: id)))
+                    UIApplication.shared.open(storeURL)
+                    completion?()
+                })
+            } else {
+                alert.addAction(UIAlertAction(title: configuration.dismissButtonTitle, style: .default) { _ in
+                    onEvent?(.userAction(action: action, choice: .custom(id: id)))
+                    completion?()
+                })
+            }
         }
 
         viewController.present(alert, animated: animated) {

@@ -20,9 +20,11 @@ public final class AppUpdateManager: ObservableObject {
     public static let shared = AppUpdateManager()
 
     @Published public private(set) var currentAction: AppUpdateAction = .none
+    @Published public private(set) var latestConfig: AppUpdateConfig? = nil
     @Published public private(set) var isChecking: Bool = false
     @Published public private(set) var lastCheckDate: Date? = nil
 
+    private var activeTask: Task<AppUpdateAction, Never>?
     private var hasCheckedThisSession = false
     private let userDefaults: UserDefaults
 
@@ -33,14 +35,15 @@ public final class AppUpdateManager: ObservableObject {
         }
     }
 
-    /// Performs update check according to the given policy and fetcher.
+    /// Performs update check according to the given policy, evaluator, and fetcher.
     @discardableResult
     public func check(
         policy: AppUpdateCheckPolicy = .always,
         currentVersion: AppVersion = AppUpdateChecker.currentInstalledVersion(),
         defaultStoreURL: URL? = nil,
+        evaluator: AppUpdateEvaluator = DefaultAppUpdateEvaluator(),
         onEvent: (@Sendable (AppUpdateEvent) -> Void)? = nil,
-        fetcher: @escaping () async throws -> AppUpdateConfig
+        fetcher: @Sendable @escaping () async throws -> AppUpdateConfig
     ) async -> AppUpdateAction {
         switch policy {
         case .oncePerSession:
@@ -53,26 +56,51 @@ public final class AppUpdateManager: ObservableObject {
             break
         }
 
+        if let activeTask = activeTask {
+            return await activeTask.value
+        }
+
         isChecking = true
-        defer { isChecking = false }
 
-        let action = await AppUpdateChecker.check(
-            currentVersion: currentVersion,
-            defaultStoreURL: defaultStoreURL,
-            onEvent: onEvent,
-            fetcher: fetcher
-        )
+        final class ConfigBox: @unchecked Sendable {
+            var config: AppUpdateConfig?
+        }
+        let box = ConfigBox()
 
-        self.currentAction = action
-        self.hasCheckedThisSession = true
-        let now = Date()
-        self.lastCheckDate = now
-        userDefaults.set(now, forKey: "AppUpdateKit.lastCheckDate")
+        let task = Task<AppUpdateAction, Never> { @MainActor [weak self] in
+            defer {
+                self?.activeTask = nil
+                self?.isChecking = false
+            }
 
-        return action
+            let action = await AppUpdateChecker.check(
+                currentVersion: currentVersion,
+                defaultStoreURL: defaultStoreURL,
+                evaluator: evaluator,
+                onEvent: { event in
+                    if case .configFetched(let config) = event {
+                        box.config = config
+                    }
+                    onEvent?(event)
+                },
+                fetcher: fetcher
+            )
+
+            self?.latestConfig = box.config
+            self?.currentAction = action
+            self?.hasCheckedThisSession = true
+            let now = Date()
+            self?.lastCheckDate = now
+            self?.userDefaults.set(now, forKey: "AppUpdateKit.lastCheckDate")
+
+            return action
+        }
+
+        self.activeTask = task
+        return await task.value
     }
 
-    /// Handles user choice (update, remind later, dismiss) and updates state.
+    /// Handles user choice (update, remind later, dismiss, custom) and updates state.
     public func handleUserChoice(_ choice: AppUpdateUserChoice, onEvent: (@Sendable (AppUpdateEvent) -> Void)? = nil) {
         let action = currentAction
         onEvent?(.userAction(action: action, choice: choice))
@@ -86,12 +114,15 @@ public final class AppUpdateManager: ObservableObject {
             if !action.isRequired {
                 currentAction = .none
             }
+        case .custom:
+            currentAction = .none
         }
     }
 
     /// Resets the cached check status.
     public func reset() {
         currentAction = .none
+        latestConfig = nil
         hasCheckedThisSession = false
         lastCheckDate = nil
         userDefaults.removeObject(forKey: "AppUpdateKit.lastCheckDate")
@@ -104,9 +135,11 @@ public final class AppUpdateManager {
     public static let shared = AppUpdateManager()
 
     public private(set) var currentAction: AppUpdateAction = .none
+    public private(set) var latestConfig: AppUpdateConfig? = nil
     public private(set) var isChecking: Bool = false
     public private(set) var lastCheckDate: Date? = nil
 
+    private var activeTask: Task<AppUpdateAction, Never>?
     private var hasCheckedThisSession = false
     private let userDefaults: UserDefaults
 
@@ -117,14 +150,15 @@ public final class AppUpdateManager {
         }
     }
 
-    /// Performs update check according to the given policy and fetcher.
+    /// Performs update check according to the given policy, evaluator, and fetcher.
     @discardableResult
     public func check(
         policy: AppUpdateCheckPolicy = .always,
         currentVersion: AppVersion = AppUpdateChecker.currentInstalledVersion(),
         defaultStoreURL: URL? = nil,
+        evaluator: AppUpdateEvaluator = DefaultAppUpdateEvaluator(),
         onEvent: (@Sendable (AppUpdateEvent) -> Void)? = nil,
-        fetcher: @escaping () async throws -> AppUpdateConfig
+        fetcher: @Sendable @escaping () async throws -> AppUpdateConfig
     ) async -> AppUpdateAction {
         switch policy {
         case .oncePerSession:
@@ -137,26 +171,51 @@ public final class AppUpdateManager {
             break
         }
 
+        if let activeTask = activeTask {
+            return await activeTask.value
+        }
+
         isChecking = true
-        defer { isChecking = false }
 
-        let action = await AppUpdateChecker.check(
-            currentVersion: currentVersion,
-            defaultStoreURL: defaultStoreURL,
-            onEvent: onEvent,
-            fetcher: fetcher
-        )
+        final class ConfigBox: @unchecked Sendable {
+            var config: AppUpdateConfig?
+        }
+        let box = ConfigBox()
 
-        self.currentAction = action
-        self.hasCheckedThisSession = true
-        let now = Date()
-        self.lastCheckDate = now
-        userDefaults.set(now, forKey: "AppUpdateKit.lastCheckDate")
+        let task = Task<AppUpdateAction, Never> { @MainActor [weak self] in
+            defer {
+                self?.activeTask = nil
+                self?.isChecking = false
+            }
 
-        return action
+            let action = await AppUpdateChecker.check(
+                currentVersion: currentVersion,
+                defaultStoreURL: defaultStoreURL,
+                evaluator: evaluator,
+                onEvent: { event in
+                    if case .configFetched(let config) = event {
+                        box.config = config
+                    }
+                    onEvent?(event)
+                },
+                fetcher: fetcher
+            )
+
+            self?.latestConfig = box.config
+            self?.currentAction = action
+            self?.hasCheckedThisSession = true
+            let now = Date()
+            self?.lastCheckDate = now
+            self?.userDefaults.set(now, forKey: "AppUpdateKit.lastCheckDate")
+
+            return action
+        }
+
+        self.activeTask = task
+        return await task.value
     }
 
-    /// Handles user choice (update, remind later, dismiss) and updates state.
+    /// Handles user choice (update, remind later, dismiss, custom) and updates state.
     public func handleUserChoice(_ choice: AppUpdateUserChoice, onEvent: (@Sendable (AppUpdateEvent) -> Void)? = nil) {
         let action = currentAction
         onEvent?(.userAction(action: action, choice: choice))
@@ -170,12 +229,15 @@ public final class AppUpdateManager {
             if !action.isRequired {
                 currentAction = .none
             }
+        case .custom:
+            currentAction = .none
         }
     }
 
     /// Resets the cached check status.
     public func reset() {
         currentAction = .none
+        latestConfig = nil
         hasCheckedThisSession = false
         lastCheckDate = nil
         userDefaults.removeObject(forKey: "AppUpdateKit.lastCheckDate")

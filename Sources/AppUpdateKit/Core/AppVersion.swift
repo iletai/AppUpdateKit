@@ -1,27 +1,25 @@
 import Foundation
 
-/// Represents a semantic version with integer component normalization.
-public struct AppVersion: Comparable, Sendable, Equatable, Hashable, CustomStringConvertible, ExpressibleByStringLiteral {
-    public let rawValue: String
+/// Semantic version model with integer component normalization and metadata stripping.
+public struct AppVersion: Comparable, Hashable, Sendable, CustomStringConvertible, ExpressibleByStringLiteral, RawRepresentable, Codable {
+    public let raw: String
     public let components: [Int]
 
-    public init(_ rawValue: String) {
-        self.rawValue = rawValue
-        // Strip prerelease (-...) and build metadata (+...)
-        let base = rawValue
-            .components(separatedBy: CharacterSet(charactersIn: "-+"))
-            .first ?? ""
+    public var rawValue: String {
+        return raw
+    }
 
-        let parsed = base
+    public init(rawValue: String) {
+        self.init(rawValue)
+    }
+
+    public init(_ raw: String) {
+        self.raw = raw
+        let withoutPrerelease = raw.split(separator: "-").first.map(String.init) ?? ""
+        let clean = withoutPrerelease.split(separator: "+").first.map(String.init) ?? ""
+        self.components = clean
             .split(separator: ".")
-            .compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
-
-        // Trim trailing zeros for normalization: [1, 2, 0, 0] -> [1, 2]
-        var normalized = parsed
-        while let last = normalized.last, last == 0 {
-            normalized.removeLast()
-        }
-        self.components = normalized
+            .compactMap { Int($0) }
     }
 
     public init(stringLiteral value: String) {
@@ -29,26 +27,50 @@ public struct AppVersion: Comparable, Sendable, Equatable, Hashable, CustomStrin
     }
 
     public var description: String {
-        rawValue
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(components)
-    }
-
-    public static func == (lhs: AppVersion, rhs: AppVersion) -> Bool {
-        lhs.components == rhs.components
+        return raw
     }
 
     public static func < (lhs: AppVersion, rhs: AppVersion) -> Bool {
-        let maxCount = max(lhs.components.count, rhs.components.count)
-        for index in 0..<maxCount {
-            let left = index < lhs.components.count ? lhs.components[index] : 0
-            let right = index < rhs.components.count ? rhs.components[index] : 0
-            if left != right {
-                return left < right
+        let count = max(lhs.components.count, rhs.components.count)
+        for i in 0..<count {
+            let l = i < lhs.components.count ? lhs.components[i] : 0
+            let r = i < rhs.components.count ? rhs.components[i] : 0
+            if l != r {
+                return l < r
             }
         }
         return false
+    }
+
+    public static func == (lhs: AppVersion, rhs: AppVersion) -> Bool {
+        let count = max(lhs.components.count, rhs.components.count)
+        for i in 0..<count {
+            let l = i < lhs.components.count ? lhs.components[i] : 0
+            let r = i < rhs.components.count ? rhs.components[i] : 0
+            if l != r {
+                return false
+            }
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        // Hash normalized components so 1.2 and 1.2.0 hash identically
+        var normalized = components
+        while let last = normalized.last, last == 0 {
+            normalized.removeLast()
+        }
+        hasher.combine(normalized)
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let rawString = try container.decode(String.self)
+        self.init(rawString)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(raw)
     }
 }

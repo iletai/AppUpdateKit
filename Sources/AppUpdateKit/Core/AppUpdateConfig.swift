@@ -1,6 +1,6 @@
 import Foundation
 
-/// Configuration model representing app update policies and remote settings.
+/// Configuration model representing app update policies, remote settings, and custom metadata.
 public struct AppUpdateConfig: Codable, Sendable, Equatable {
     public let minimumVersion: String?
     public let latestVersion: String?
@@ -9,6 +9,15 @@ public struct AppUpdateConfig: Codable, Sendable, Equatable {
     public let title: String?
     public let message: String?
     public let releaseNotes: [String]?
+    public let metadata: [String: String]?
+
+    public var latestAppVersion: AppVersion? {
+        latestVersion.map { AppVersion($0) }
+    }
+
+    public var minimumAppVersion: AppVersion? {
+        minimumVersion.map { AppVersion($0) }
+    }
 
     public init(
         minimumVersion: String? = nil,
@@ -17,7 +26,8 @@ public struct AppUpdateConfig: Codable, Sendable, Equatable {
         isMaintenance: Bool = false,
         title: String? = nil,
         message: String? = nil,
-        releaseNotes: [String]? = nil
+        releaseNotes: [String]? = nil,
+        metadata: [String: String]? = nil
     ) {
         self.minimumVersion = minimumVersion
         self.latestVersion = latestVersion
@@ -26,6 +36,7 @@ public struct AppUpdateConfig: Codable, Sendable, Equatable {
         self.title = title
         self.message = message
         self.releaseNotes = releaseNotes
+        self.metadata = metadata
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -43,6 +54,8 @@ public struct AppUpdateConfig: Codable, Sendable, Equatable {
         case releaseNotes
         case releaseNotesSnake = "release_notes"
         case changelog
+        case metadata
+        case customPayload = "custom_payload"
     }
 
     public init(from decoder: Decoder) throws {
@@ -66,9 +79,18 @@ public struct AppUpdateConfig: Codable, Sendable, Equatable {
             self.storeURL = nil
         }
 
-        self.isMaintenance = (try? container.decodeIfPresent(Bool.self, forKey: .isMaintenance))
-            ?? (try? container.decodeIfPresent(Bool.self, forKey: .isMaintenanceSnake))
-            ?? false
+        // Support bool or string-boolean ("true" / "1")
+        if let boolVal = try? container.decodeIfPresent(Bool.self, forKey: .isMaintenance) {
+            self.isMaintenance = boolVal
+        } else if let boolValSnake = try? container.decodeIfPresent(Bool.self, forKey: .isMaintenanceSnake) {
+            self.isMaintenance = boolValSnake
+        } else if let strVal = try? container.decodeIfPresent(String.self, forKey: .isMaintenance) {
+            self.isMaintenance = (strVal.lowercased() == "true" || strVal == "1")
+        } else if let strValSnake = try? container.decodeIfPresent(String.self, forKey: .isMaintenanceSnake) {
+            self.isMaintenance = (strValSnake.lowercased() == "true" || strValSnake == "1")
+        } else {
+            self.isMaintenance = false
+        }
 
         self.title = try container.decodeIfPresent(String.self, forKey: .title)
         self.message = try container.decodeIfPresent(String.self, forKey: .message)
@@ -89,6 +111,9 @@ public struct AppUpdateConfig: Codable, Sendable, Equatable {
         } else {
             self.releaseNotes = nil
         }
+
+        self.metadata = (try? container.decodeIfPresent([String: String].self, forKey: .metadata))
+            ?? (try? container.decodeIfPresent([String: String].self, forKey: .customPayload))
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -100,5 +125,6 @@ public struct AppUpdateConfig: Codable, Sendable, Equatable {
         try container.encodeIfPresent(title, forKey: .title)
         try container.encodeIfPresent(message, forKey: .message)
         try container.encodeIfPresent(releaseNotes, forKey: .releaseNotes)
+        try container.encodeIfPresent(metadata, forKey: .metadata)
     }
 }

@@ -8,51 +8,18 @@ public enum AppUpdateChecker {
         return AppVersion(version)
     }
 
-    /// Evaluates pure business logic to determine update action.
+    /// Evaluates pure business logic using standard or custom evaluator.
     public static func evaluate(
         currentVersion: AppVersion,
         config: AppUpdateConfig,
-        defaultStoreURL: URL? = nil
+        defaultStoreURL: URL? = nil,
+        evaluator: AppUpdateEvaluator = DefaultAppUpdateEvaluator()
     ) -> AppUpdateAction {
-        let title = config.title?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let message = config.message?.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        if config.isMaintenance {
-            return .maintenance(
-                title: (title?.isEmpty == false) ? title! : "Maintenance",
-                message: (message?.isEmpty == false) ? message! : "The service is currently undergoing maintenance. Please try again later."
-            )
-        }
-
-        let storeURL = config.storeURL ?? defaultStoreURL
-
-        if let minVerStr = config.minimumVersion,
-           !minVerStr.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            let minVersion = AppVersion(minVerStr)
-            if currentVersion < minVersion, let storeURL = storeURL {
-                return .forceUpdate(
-                    title: (title?.isEmpty == false) ? title! : "Update Required",
-                    message: (message?.isEmpty == false) ? message! : "A new version of the app is available. Please update to continue.",
-                    storeURL: storeURL,
-                    releaseNotes: config.releaseNotes
-                )
-            }
-        }
-
-        if let latestVerStr = config.latestVersion,
-           !latestVerStr.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            let latestVersion = AppVersion(latestVerStr)
-            if currentVersion < latestVersion, let storeURL = storeURL {
-                return .optionalUpdate(
-                    title: (title?.isEmpty == false) ? title! : "Update Available",
-                    message: (message?.isEmpty == false) ? message! : "A new version of the app is available. Would you like to update now?",
-                    storeURL: storeURL,
-                    releaseNotes: config.releaseNotes
-                )
-            }
-        }
-
-        return .none
+        return evaluator.evaluate(
+            currentVersion: currentVersion,
+            config: config,
+            defaultStoreURL: defaultStoreURL
+        )
     }
 
     /// Asynchronously fetches update configuration and returns update action.
@@ -60,6 +27,7 @@ public enum AppUpdateChecker {
     public static func check(
         currentVersion: AppVersion = currentInstalledVersion(),
         defaultStoreURL: URL? = nil,
+        evaluator: AppUpdateEvaluator = DefaultAppUpdateEvaluator(),
         onEvent: (@Sendable (AppUpdateEvent) -> Void)? = nil,
         fetcher: () async throws -> AppUpdateConfig
     ) async -> AppUpdateAction {
@@ -71,7 +39,8 @@ public enum AppUpdateChecker {
             let action = evaluate(
                 currentVersion: currentVersion,
                 config: config,
-                defaultStoreURL: defaultStoreURL
+                defaultStoreURL: defaultStoreURL,
+                evaluator: evaluator
             )
             onEvent?(.evaluated(action: action))
             return action

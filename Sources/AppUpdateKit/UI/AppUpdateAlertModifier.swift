@@ -45,7 +45,7 @@ public struct AppUpdateAlertModifier: ViewModifier {
                 switch action {
                 case .none:
                     return false
-                case .optionalUpdate, .forceUpdate, .maintenance:
+                case .optionalUpdate, .forceUpdate, .maintenance, .custom:
                     return true
                 }
             },
@@ -71,7 +71,7 @@ public struct AppUpdateAlertModifier: ViewModifier {
                 case .none:
                     return Alert(title: Text(""))
 
-                case .optionalUpdate(let title, let message, let storeURL, _):
+                case .optionalUpdate(let title, let message, let storeURL, _, _, _):
                     return Alert(
                         title: Text(title),
                         message: Text(message),
@@ -90,7 +90,7 @@ public struct AppUpdateAlertModifier: ViewModifier {
                         }
                     )
 
-                case .forceUpdate(let title, let message, let storeURL, _):
+                case .forceUpdate(let title, let message, let storeURL, _, _, _):
                     return Alert(
                         title: Text(title),
                         message: Text(message),
@@ -101,7 +101,7 @@ public struct AppUpdateAlertModifier: ViewModifier {
                         }
                     )
 
-                case .maintenance(let title, let message):
+                case .maintenance(let title, let message, _):
                     return Alert(
                         title: Text(title),
                         message: Text(message),
@@ -112,6 +112,38 @@ public struct AppUpdateAlertModifier: ViewModifier {
                             onDismiss?()
                         }
                     )
+
+                case .custom(let id, let title, let message, let storeURL, _, _, _):
+                    if let storeURL = storeURL {
+                        return Alert(
+                            title: Text(title ?? ""),
+                            message: Text(message ?? ""),
+                            primaryButton: .default(Text(configuration.updateButtonTitle)) {
+                                let currentAction = action
+                                onEvent?(.userAction(action: currentAction, choice: .custom(id: id)))
+                                openURL(storeURL)
+                                action = .none
+                                onDismiss?()
+                            },
+                            secondaryButton: .cancel(Text(configuration.laterButtonTitle)) {
+                                let currentAction = action
+                                onEvent?(.userAction(action: currentAction, choice: .dismiss))
+                                action = .none
+                                onDismiss?()
+                            }
+                        )
+                    } else {
+                        return Alert(
+                            title: Text(title ?? ""),
+                            message: Text(message ?? ""),
+                            dismissButton: .default(Text(configuration.dismissButtonTitle)) {
+                                let currentAction = action
+                                onEvent?(.userAction(action: currentAction, choice: .custom(id: id)))
+                                action = .none
+                                onDismiss?()
+                            }
+                        )
+                    }
                 }
             }
             .onChange(of: action) { newAction in

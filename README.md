@@ -1,24 +1,36 @@
-# AppUpdateKit
-
 <p align="center">
-  <img src="https://raw.githubusercontent.com/iletai/AppUpdateKit/main/art/banner.png" alt="AppUpdateKit Banner" width="100%" onerror="this.style.display='none'"/>
+  <img src="art/banner.svg" alt="AppUpdateKit Banner" width="100%" />
 </p>
 
 <p align="center">
   <a href="https://github.com/iletai/AppUpdateKit/actions"><img src="https://github.com/iletai/AppUpdateKit/workflows/Swift%20CI/badge.svg" alt="CI Status"></a>
   <img src="https://img.shields.io/badge/Swift-5.9%20%7C%206.0-orange.svg" alt="Swift Version">
-  <img src="https://img.shields.io/badge/Platforms-iOS%2014+%20%7C%20macOS%2011+%20%7C%20watchOS%207+%20%7C%20tvOS%2014+-blue.svg" alt="Platforms">
+  <img src="https://img.shields.io/badge/Platforms-iOS%2014+%20%7C%20macOS%2011+%20%7C%20watchOS%207+%20%7C%20tvOS%2014+%20%7C%20Linux-blue.svg" alt="Platforms">
   <img src="https://img.shields.io/badge/Dependencies-0%20Zero-green.svg" alt="Zero Dependencies">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-black.svg" alt="License"></a>
 </p>
 
-**AppUpdateKit** is an ultra-lightweight, zero-dependency Swift Package for evaluating app versions, enforcing **Force Updates**, presenting **Optional Updates** (with release notes), and activating **Maintenance Mode** remotely via **microCMS**, **Raw JSON (GitHub Raw, S3, Cloudflare Workers)**, or any backend endpoint.
+<p align="center">
+  <b>English</b> | <a href="#-tiếng-việt">Tiếng Việt</a> | <a href="#-日本語">日本語</a>
+</p>
+
+---
+
+# 🇬🇧 English
+
+**AppUpdateKit** is an ultra-lightweight, zero-dependency, **headless-first** Swift Package for evaluating app versions, enforcing **Force Updates**, presenting **Optional Updates** (with release notes), and activating **Maintenance Mode** remotely via **microCMS**, **Raw JSON (GitHub Raw, S3, Cloudflare Workers)**, or any backend endpoint.
+
+### 🛡️ Core Values & Design Principles
+- **100% Headless-First (UI is strictly optional):** AppUpdateKit is built as a pure business logic engine (`AppUpdateChecker`, `AppUpdateEvaluator`, `AppVersion`, `AppUpdateConfig`). You are **never forced to use our UI**. All raw models, metadata, version objects, and event streams are exposed so you can render your own custom dialogs, sheets, or bridges (React Native, Flutter).
+- **Zero Third-Party Dependencies:** Pure Swift Standard Library (`Foundation`, `SwiftUI`, `Combine`, `UIKit`).
+- **O(N) SemVer Normalizer:** Vector integer comparator (`"1.2"` == `"1.2.0"` == `"1.2.0.0"`, `"1.10.0"` > `"1.2.0"`), stripping prerelease tags and build metadata.
+- **Fail-Safe by Default:** Network errors, timeouts, or corrupt JSON gracefully fallback to `.none` without crashing or blocking users.
+- **Full Lifecycle Events & Analytics:** Emits granular events (`checkStarted`, `configFetched`, `evaluated`, `presented`, `userAction`, `checkFailed`) for Firebase, Mixpanel, and custom logging.
+- **Swift 6 & Sendable Compliant:** Fully concurrency-safe with `@MainActor` safety and Task deduplication.
 
 ---
 
 ## 📱 Visual UI Preview
-
-### 1. Native Alert vs. Custom Card Sheet
 
 ```
 ┌────────────────────────────────────────┐       ┌────────────────────────────────────────┐
@@ -41,214 +53,84 @@
         [ SwiftUI / UIKit Alert ]                        [ Custom SwiftUI Card Sheet ]
 ```
 
-### 2. Force Update (Mandatory) vs. Maintenance Mode
-
-```
-┌────────────────────────────────────────┐       ┌────────────────────────────────────────┐
-│             Update Required            │       │            Hệ Thống Bảo Trì            │
-│                   ⚠️                   │       │                   🛠️                   │
-│  This version is deprecated. Please    │       │  Hệ thống đang bảo trì định kỳ để      │
-│  update to continue using the service. │       │  nâng cấp server. Vui lòng quay lại    │
-│                                        │       │  sau ít phút.                          │
-│                                        │       │                                        │
-│  ┌──────────────────────────────────┐  │       │  ┌──────────────────────────────────┐  │
-│  │           Cập nhật ngay          │  │       │  │              Đã hiểu             │  │
-│  └──────────────────────────────────┘  │       │  └──────────────────────────────────┘  │
-└────────────────────────────────────────┘       └────────────────────────────────────────┘
-         [ Non-dismissable Modal ]                       [ Server Maintenance Modal ]
-```
-
 ---
 
-## 🌟 Highlights & Architecture
+## 🚀 Quick Start (100% Headless / Custom UI)
 
-- **Zero Third-Party Dependencies:** 100% Apple Native (`Foundation`, `SwiftUI`, `Combine`, `UIKit`).
-- **O(N) SemVer Normalizer:** Integer vector comparison (`"1.2"` == `"1.2.0"` == `"1.2.0.0"`, `"1.10.0"` > `"1.2.0"`), safely stripping prerelease tags and build metadata.
-- **Fail-Safe by Default:** Network errors, timeouts, or corrupt JSON gracefully fallback to `.none` without crashing or blocking users.
-- **Decoupled Architecture:** Pure logic engine (`AppUpdateChecker.evaluate`) is fully separated from I/O fetchers and UI presentation.
-- **Full Lifecycle Events & Analytics:** Emits granular events (`checkStarted`, `configFetched`, `evaluated`, `presented`, `userAction`, `checkFailed`) for Firebase, Mixpanel, and Telemetry tracking.
-- **Swift 6 & Sendable Compliant:** Zero data races, `@MainActor` UI safety.
-
-```
- ┌──────────────────────┐        ┌──────────────────────┐
- │   microCMS / JSON    │───────▶│   AppUpdateFetcher   │
- └──────────────────────┘        └──────────┬───────────┘
-                                            │ async throws -> AppUpdateConfig
-                                            ▼
- ┌──────────────────────┐        ┌──────────────────────┐
- │      AppVersion      │───────▶│   AppUpdateChecker   │
- └──────────────────────┘        └──────────┬───────────┘
-                                            │ AppUpdateAction
-                                            ▼
- ┌──────────────────────────────────────────────────────────────┐
- │                    AppUpdateAction Types                     │
- │  • .none                                                     │
- │  • .optionalUpdate(title, message, storeURL, releaseNotes)   │
- │  • .forceUpdate(title, message, storeURL, releaseNotes)      │
- │  • .maintenance(title, message)                              │
- └──────────────────────────────┬───────────────────────────────┘
-                                │
-          ┌─────────────────────┴─────────────────────┐
-          ▼                                           ▼
-┌──────────────────┐                        ┌──────────────────┐
-│   SwiftUI View   │                        │   UIKit Helper   │
-│  .appUpdateAlert │                        │ presentAppUpdate │
-│  .appUpdateSheet │                        │   (Controllers)  │
-└──────────────────┘                        └──────────────────┘
-```
-
----
-
-## 📦 Installation
-
-### Swift Package Manager (SPM)
-
-In Xcode, select **File > Add Package Dependencies...** and enter:
-
-```
-https://github.com/iletai/AppUpdateKit.git
-```
-
-Or add directly to `Package.swift`:
+Use pure evaluation logic without touching any UI code:
 
 ```swift
-dependencies: [
-    .package(url: "https://github.com/iletai/AppUpdateKit.git", from: "1.0.0")
-]
-```
-
----
-
-## 🛠️ Remote Backend Configuration
-
-`AppUpdateKit` supports both `snake_case` and `camelCase` response payloads.
-
-### JSON Payload Schema
-
-```json
-{
-  "minimum_version": "1.0.0",
-  "latest_version": "2.1.0",
-  "store_url": "https://apps.apple.com/app/id123456789",
-  "is_maintenance": false,
-  "title": "Bản cập nhật mới 2.1.0",
-  "message": "Nhiều tính năng mới hấp dẫn và sửa lỗi hiệu năng.",
-  "release_notes": [
-    "✨ Hỗ trợ giao diện Liquid Glass & Dark Mode",
-    "⚡️ Tối ưu hóa hiệu năng khởi động nhanh hơn 40%",
-    "🐛 Sửa lỗi đồng bộ dữ liệu"
-  ]
-}
-```
-
-### microCMS Setup Schema
-
-| Field ID | Field Name | Type | Description |
-| :--- | :--- | :--- | :--- |
-| `minimum_version` | Minimum Required Version | Text | Versions below this trigger mandatory Force Update (e.g. `1.0.0`) |
-| `latest_version` | Latest Version | Text | Latest version available on App Store (e.g. `2.1.0`) |
-| `store_url` | App Store URL | Text | Link to App Store or TestFlight |
-| `is_maintenance` | Maintenance Mode | Boolean | Toggle maintenance state |
-| `title` | Dialog Title | Text (Optional) | Custom title |
-| `message` | Dialog Message | TextArea (Optional) | Custom description |
-| `release_notes` | Release Notes | TextArea / List (Optional) | Bullet points or newline-separated notes |
-
----
-
-## 🚀 Usage Guide
-
-### 1. SwiftUI Native Alert
-
-```swift
-import SwiftUI
 import AppUpdateKit
 
-@main
-struct MyApp: App {
-    @State private var updateAction: AppUpdateAction = .none
+let fetcher = AppUpdateFetcher.microCMS(
+    endpoint: URL(string: "https://your-service.microcms.io/api/v1/app-update")!,
+    apiKey: "YOUR_API_KEY"
+)
 
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
-                .appUpdateAlert(
-                    action: $updateAction,
-                    configuration: AppUpdateUIConfiguration(
-                        updateButtonTitle: "Cập nhật",
-                        laterButtonTitle: "Để sau",
-                        dismissButtonTitle: "Đã hiểu"
-                    ),
-                    onEvent: { event in
-                        print("AppUpdate Event: \(event)")
-                    }
-                )
-                .task {
-                    let fetcher = AppUpdateFetcher.microCMS(
-                        endpoint: URL(string: "https://your-service.microcms.io/api/v1/app-update")!,
-                        apiKey: "YOUR_MICROCMS_API_KEY"
-                    )
-                    updateAction = await AppUpdateChecker.check(fetcher: fetcher)
-                }
-        }
-    }
+// Check update status asynchronously (fail-safe)
+let action: AppUpdateAction = await AppUpdateChecker.check(
+    onEvent: { event in
+        Analytics.logEvent("app_update_lifecycle", parameters: ["event": "\(event)"])
+    },
+    fetcher: fetcher
+)
+
+// Handle action in your own custom View, Modal, or Coordinator
+switch action {
+case .none:
+    print("App is up-to-date")
+case .optionalUpdate(let title, let message, let storeURL, let version, let releaseNotes, let metadata):
+    MyCustomDialogPresenter.showOptionalUpdate(title: title, version: version?.description, url: storeURL)
+case .forceUpdate(let title, let message, let storeURL, let version, let releaseNotes, let metadata):
+    MyCustomDialogPresenter.showBlockingUpdate(title: title, url: storeURL)
+case .maintenance(let title, let message, let metadata):
+    MyCustomDialogPresenter.showMaintenanceScreen(message: message)
+case .custom(let id, let title, let message, let storeURL, _, _, _):
+    MyCustomDialogPresenter.handleCustomAction(id: id)
 }
 ```
 
 ---
 
-### 2. SwiftUI Custom Sheet with Release Notes
+## 🎨 Optional Pre-built UI Modifiers
 
+### 1. SwiftUI Native Alert
+```swift
+ContentView()
+    .appUpdateAlert(
+        action: $updateAction,
+        configuration: AppUpdateUIConfiguration(
+            updateButtonTitle: "Update Now",
+            laterButtonTitle: "Later",
+            dismissButtonTitle: "OK"
+        ),
+        onEvent: { event in
+            print("[AppUpdateKit] Event: \(event)")
+        }
+    )
+```
+
+### 2. SwiftUI Custom Card Sheet
 ```swift
 ContentView()
     .appUpdateSheet(
         action: $updateAction,
         accentColor: .indigo,
         onEvent: { event in
-            // Handle Analytics
             if case .userAction(let action, let choice) = event {
-                Analytics.logEvent("update_prompt_interaction", parameters: [
-                    "choice": "\(choice)",
-                    "action_title": action.title ?? ""
-                ])
+                print("User tapped \(choice) for \(action.title ?? "")")
             }
         }
     )
 ```
 
----
-
 ### 3. UIKit Integration (`UIViewController`)
-
 ```swift
-import UIKit
-import AppUpdateKit
-
-class MainViewController: UIViewController {
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        checkForUpdates()
-    }
-
-    private func checkForUpdates() {
+class ViewController: UIViewController {
+    func checkVersion() {
         Task { [weak self] in
-            guard let self = self else { return }
-
-            let fetcher = AppUpdateFetcher.json(
-                url: URL(string: "https://your-domain.com/app-update.json")!
-            )
-
             let action = await AppUpdateChecker.check(fetcher: fetcher)
-
-            self.presentAppUpdate(
-                action: action,
-                configuration: AppUpdateUIConfiguration(
-                    updateButtonTitle: "Cập nhật ngay",
-                    laterButtonTitle: "Bỏ qua",
-                    dismissButtonTitle: "Đóng"
-                ),
-                onEvent: { event in
-                    print("[AppUpdateKit] \(event)")
-                }
-            )
+            self?.presentAppUpdate(action: action)
         }
     }
 }
@@ -256,81 +138,63 @@ class MainViewController: UIViewController {
 
 ---
 
-### 4. Stateful Manager & Throttling Policy (`AppUpdateManager`)
+# 🇻🇳 Tiếng Việt
 
-Use `AppUpdateManager` to prevent hammering servers on every app active:
+**AppUpdateKit** là thư viện Swift Package Manager (SPM) siêu nhẹ, zero-dependency, thiết kế theo triết lý **Headless-First (Không ép buộc dùng UI có sẵn)**. Hỗ trợ kiểm tra phiên bản ứng dụng, kích hoạt **Force Update (Cập nhật bắt buộc)**, **Optional Update (Cập nhật tùy chọn kèm Release Notes)**, và **Maintenance Mode (Bảo trì hệ thống)** từ xa qua **microCMS**, **Raw JSON**, hoặc bất kỳ API backend nào.
 
-```swift
-let manager = AppUpdateManager.shared
+### 🌟 Điểm nổi bật
+1. **Headless-First 100%:** Tách biệt hoàn toàn Pure Logic Engine (`AppUpdateChecker`) khỏi tầng UI. Developer toàn quyền lấy raw action, version, metadata để tự build UI hoặc chuyển tiếp qua Flutter / React Native Bridge.
+2. **0 Dependency bên ngoài:** Thuần Swift Standard Library (`Foundation`, `SwiftUI`, `Combine`, `UIKit`).
+3. **Bộ so sánh SemVer O(N):** Chuẩn hóa số nguyên (`"1.2"` == `"1.2.0"` == `"1.2.0.0"`), tự động loại bỏ tag prerelease/build metadata (`1.0.0-beta.1` -> `1.0.0`).
+4. **An toàn tuyệt đối (Fail-Safe):** Khi mất mạng, server timeout hoặc JSON hỏng, app tự fallback về `.none`, không làm crash hoặc block user khởi động app.
+5. **Vòng đời Event & Analytics chi tiết:** Bắn đầy đủ sự kiện (`checkStarted`, `configFetched`, `evaluated`, `presented`, `userAction`, `checkFailed`) cho Firebase Analytics, Mixpanel, TelemetryDeck.
 
-// Check once per session
-await manager.check(
-    policy: .oncePerSession,
-    fetcher: fetcher
-)
+### 📊 Bảng so sánh Semantic Versioning
 
-// Or check at most once every 24 hours
-await manager.check(
-    policy: .interval(24 * 3600),
-    fetcher: fetcher
-)
-```
-
----
-
-### 5. Unit Testing with Pure Logic Engine
-
-You can test version evaluation deterministically without mocking network calls:
-
-```swift
-import XCTest
-import AppUpdateKit
-
-final class AppVersionPolicyTests: XCTestCase {
-    func testForceUpdateTriggered() {
-        let config = AppUpdateConfig(
-            minimumVersion: "2.0.0",
-            latestVersion: "2.5.0",
-            storeURL: URL(string: "https://apps.apple.com/app/id123")!
-        )
-
-        let action = AppUpdateChecker.evaluate(
-            currentVersion: AppVersion("1.9.9"),
-            config: config
-        )
-
-        XCTAssertTrue(action.isRequired)
-        XCTAssertTrue(action.isBlocking)
-        XCTAssertEqual(action.storeURL, config.storeURL)
-    }
-}
-```
-
----
-
-## 📊 Semantic Versioning Matrix
-
-| Current Version | Remote Minimum | Remote Latest | Evaluated Action | Behavior |
+| Version hiện tại | Remote Minimum | Remote Latest | Action trả về | Hành vi ứng dụng |
 | :--- | :--- | :--- | :--- | :--- |
-| `1.0.0` | `2.0.0` | `2.5.0` | `.forceUpdate` | 🚨 User must update to continue |
-| `2.0.0` | `1.5.0` | `2.1.0` | `.optionalUpdate` | 💡 Update prompt with "Later" option |
-| `2.1.0` | `1.5.0` | `2.1.0` | `.none` | ✅ App is up-to-date |
-| `2.1.0.0` | `1.5.0` | `2.1` | `.none` | ✅ Normalized version match |
-| `any` | `any` | `any` (`isMaintenance: true`) | `.maintenance` | 🛠️ Full blocking maintenance mode |
-| `1.0.0` | Network Error (404/500/Timeout) | N/A | `.none` | 🛡️ Fail-safe: app opens normally |
+| `1.0.0` | `2.0.0` | `2.5.0` | `.forceUpdate` | 🚨 Bắt buộc cập nhật để tiếp tục |
+| `2.0.0` | `1.5.0` | `2.1.0` | `.optionalUpdate` | 💡 Hiện thông báo cập nhật (có nút "Để sau") |
+| `2.1.0` | `1.5.0` | `2.1.0` | `.none` | ✅ App đã ở bản mới nhất |
+| `2.1.0.0` | `1.5.0` | `2.1` | `.none` | ✅ Chuẩn hóa chuỗi version trùng khớp |
+| `bất kỳ` | `bất kỳ` | `bất kỳ` (`is_maintenance: true`) | `.maintenance` | 🛠️ Khóa ứng dụng, hiện màn hình bảo trì |
+| `1.0.0` | Lỗi mạng (404/500/Timeout) | N/A | `.none` | 🛡️ Fail-safe: app hoạt động bình thường |
 
 ---
 
-## 📋 Example Project
+# 🇯🇵 日本語
 
-Check out the interactive demo in the [`Examples/`](Examples/) folder:
-- **`Examples/SwiftUI/AppUpdateDemoView.swift`**: Full SwiftUI simulator.
-- **`Examples/UIKit/ViewController.swift`**: UIKit implementation.
-- **`Examples/microcms-schema.json`**: Ready-to-import microCMS schema.
-- **`Examples/config.json`**: Sample JSON config payload.
+**AppUpdateKit** は、完全な **Headless-First** 設計を採用した超軽量・依存関係ゼロ（Zero Dependency）の Swift Package です。**microCMS** や **Raw JSON (GitHub Raw, S3, Cloudflare Workers)** などを介して、アプリの強制アップデート（Force Update）、任意アップデート（Optional Update・更新履歴付き）、およびメンテナンスモード（Maintenance Mode）をリモートで制御します。
+
+### 🌟 主な特徴
+1. **完全な Headless 設計（UI の強制なし）:** 純粋なビジネスロジックエンジンを提供し、開発者は独自のカスタム UI、モーダル、または Flutter / React Native ブリッジを自由に構築できます。
+2. **外部依存性ゼロ:** Apple 標準フレームワーク（`Foundation`, `SwiftUI`, `Combine`, `UIKit`）のみで動作。
+3. **O(N) SemVer 比較エンジン:** バージョン文字列の正規化（`"1.2"` == `"1.2.0"` == `"1.2.0.0"`）およびプレリリースタグ除去に対応。
+4. **フェイルセーフ設計:** ネットワークエラー、タイムアウト、または不正な JSON が発生した場合でも、クラッシュせずに `.none` へ安全にフォールバック。
+5. **詳細なイベント＆アナリティクス対応:** `checkStarted`, `configFetched`, `evaluated`, `presented`, `userAction`, `checkFailed` を出力し、Firebase や Mixpanel と連携可能。
+
+### 🛠️ microCMS API スキーマ設定
+
+| フィールド ID | 表示名 | 種類 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `minimum_version` | 最低必須バージョン | テキスト | これ未満のバージョンで強制アップデートを発火 |
+| `latest_version` | 最新バージョン | テキスト | App Store で公開中の最新バージョン |
+| `store_url` | ストア URL | テキスト | App Store または TestFlight のリンク |
+| `is_maintenance` | メンテナンス中 | 真偽値 | メンテナンスモードの切り替えフラグ |
+| `title` | ダイアログタイトル | テキスト (任意) | カスタムタイトル |
+| `message` | ダイアログ本文 | 複数行テキスト (任意) | カスタム説明文 |
+| `release_notes` | 更新内容 | 複数行テキスト / リスト | 箇条書きのリリースノート |
 
 ---
+
+## 📦 Installation (SPM)
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/iletai/AppUpdateKit.git", from: "1.1.0")
+]
+```
 
 ## 📄 License
 
-AppUpdateKit is released under the **MIT License**. See [LICENSE](LICENSE) for details.
+AppUpdateKit is released under the **MIT License**. Copyright (c) 2026 iletai.
