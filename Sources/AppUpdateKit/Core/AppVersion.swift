@@ -32,11 +32,11 @@ public struct AppVersion: Comparable, Hashable, Sendable, CustomStringConvertibl
 
     public static func < (lhs: AppVersion, rhs: AppVersion) -> Bool {
         let count = max(lhs.components.count, rhs.components.count)
-        for i in 0..<count {
-            let l = i < lhs.components.count ? lhs.components[i] : 0
-            let r = i < rhs.components.count ? rhs.components[i] : 0
-            if l != r {
-                return l < r
+        for index in 0..<count {
+            let lhsValue = index < lhs.components.count ? lhs.components[index] : 0
+            let rhsValue = index < rhs.components.count ? rhs.components[index] : 0
+            if lhsValue != rhsValue {
+                return lhsValue < rhsValue
             }
         }
         return false
@@ -44,10 +44,10 @@ public struct AppVersion: Comparable, Hashable, Sendable, CustomStringConvertibl
 
     public static func == (lhs: AppVersion, rhs: AppVersion) -> Bool {
         let count = max(lhs.components.count, rhs.components.count)
-        for i in 0..<count {
-            let l = i < lhs.components.count ? lhs.components[i] : 0
-            let r = i < rhs.components.count ? rhs.components[i] : 0
-            if l != r {
+        for index in 0..<count {
+            let lhsValue = index < lhs.components.count ? lhs.components[index] : 0
+            let rhsValue = index < rhs.components.count ? rhs.components[index] : 0
+            if lhsValue != rhsValue {
                 return false
             }
         }
