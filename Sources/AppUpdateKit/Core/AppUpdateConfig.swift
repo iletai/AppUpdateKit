@@ -8,6 +8,7 @@ public struct AppUpdateConfig: Codable, Sendable, Equatable {
     public let isMaintenance: Bool
     public let title: String?
     public let message: String?
+    public let releaseNotes: [String]?
 
     public init(
         minimumVersion: String? = nil,
@@ -15,7 +16,8 @@ public struct AppUpdateConfig: Codable, Sendable, Equatable {
         storeURL: URL? = nil,
         isMaintenance: Bool = false,
         title: String? = nil,
-        message: String? = nil
+        message: String? = nil,
+        releaseNotes: [String]? = nil
     ) {
         self.minimumVersion = minimumVersion
         self.latestVersion = latestVersion
@@ -23,6 +25,7 @@ public struct AppUpdateConfig: Codable, Sendable, Equatable {
         self.isMaintenance = isMaintenance
         self.title = title
         self.message = message
+        self.releaseNotes = releaseNotes
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -37,6 +40,9 @@ public struct AppUpdateConfig: Codable, Sendable, Equatable {
         case isMaintenanceSnake = "is_maintenance"
         case title
         case message
+        case releaseNotes
+        case releaseNotesSnake = "release_notes"
+        case changelog
     }
 
     public init(from decoder: Decoder) throws {
@@ -60,12 +66,29 @@ public struct AppUpdateConfig: Codable, Sendable, Equatable {
             self.storeURL = nil
         }
 
-        self.isMaintenance = try container.decodeIfPresent(Bool.self, forKey: .isMaintenance)
-            ?? container.decodeIfPresent(Bool.self, forKey: .isMaintenanceSnake)
+        self.isMaintenance = (try? container.decodeIfPresent(Bool.self, forKey: .isMaintenance))
+            ?? (try? container.decodeIfPresent(Bool.self, forKey: .isMaintenanceSnake))
             ?? false
 
         self.title = try container.decodeIfPresent(String.self, forKey: .title)
         self.message = try container.decodeIfPresent(String.self, forKey: .message)
+
+        // Robust decoding of releaseNotes as either [String] or multiline String
+        if let notesArray = (try? container.decodeIfPresent([String].self, forKey: .releaseNotes))
+            ?? (try? container.decodeIfPresent([String].self, forKey: .releaseNotesSnake))
+            ?? (try? container.decodeIfPresent([String].self, forKey: .changelog)) {
+            self.releaseNotes = notesArray
+        } else if let singleString = (try? container.decodeIfPresent(String.self, forKey: .releaseNotes))
+            ?? (try? container.decodeIfPresent(String.self, forKey: .releaseNotesSnake))
+            ?? (try? container.decodeIfPresent(String.self, forKey: .changelog)) {
+            let items = singleString
+                .components(separatedBy: .newlines)
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+            self.releaseNotes = items.isEmpty ? nil : items
+        } else {
+            self.releaseNotes = nil
+        }
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -76,5 +99,6 @@ public struct AppUpdateConfig: Codable, Sendable, Equatable {
         try container.encode(isMaintenance, forKey: .isMaintenance)
         try container.encodeIfPresent(title, forKey: .title)
         try container.encodeIfPresent(message, forKey: .message)
+        try container.encodeIfPresent(releaseNotes, forKey: .releaseNotes)
     }
 }

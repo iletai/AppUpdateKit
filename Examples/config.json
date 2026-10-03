@@ -1,0 +1,13 @@
+{
+  "minimum_version": "1.0.0",
+  "latest_version": "2.1.0",
+  "store_url": "https://apps.apple.com/app/id123456789",
+  "is_maintenance": false,
+  "title": "Bản cập nhật mới 2.1.0",
+  "message": "Nhiều tính năng mới hấp dẫn và sửa lỗi hiệu năng.",
+  "release_notes": [
+    "✨ Hỗ trợ Liquid Glass và Dark Mode",
+    "⚡️ Tối ưu hóa hiệu năng",
+    "🐛 Sửa lỗi thông báo"
+  ]
+}

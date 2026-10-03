@@ -1,19 +1,42 @@
 #if canImport(SwiftUI)
 import SwiftUI
 
-/// SwiftUI View Modifier that presents update alerts according to AppUpdateAction.
+/// Configuration for alert buttons and localization.
+public struct AppUpdateUIConfiguration: Sendable {
+    public var updateButtonTitle: String
+    public var laterButtonTitle: String
+    public var dismissButtonTitle: String
+
+    public init(
+        updateButtonTitle: String = "Cập nhật",
+        laterButtonTitle: String = "Để sau",
+        dismissButtonTitle: String = "Đã hiểu"
+    ) {
+        self.updateButtonTitle = updateButtonTitle
+        self.laterButtonTitle = laterButtonTitle
+        self.dismissButtonTitle = dismissButtonTitle
+    }
+}
+
+/// SwiftUI View Modifier that presents native update alerts according to AppUpdateAction.
 @available(iOS 14.0, macOS 11.0, watchOS 7.0, tvOS 14.0, *)
 public struct AppUpdateAlertModifier: ViewModifier {
     @Binding public var action: AppUpdateAction
+    public var configuration: AppUpdateUIConfiguration
     public var onDismiss: (() -> Void)?
+    public var onEvent: ((AppUpdateEvent) -> Void)?
     @Environment(\.openURL) private var openURL
 
     public init(
         action: Binding<AppUpdateAction>,
-        onDismiss: (() -> Void)? = nil
+        configuration: AppUpdateUIConfiguration = AppUpdateUIConfiguration(),
+        onDismiss: (() -> Void)? = nil,
+        onEvent: ((AppUpdateEvent) -> Void)? = nil
     ) {
         self._action = action
+        self.configuration = configuration
         self.onDismiss = onDismiss
+        self.onEvent = onEvent
     }
 
     private var isPresented: Binding<Bool> {
@@ -29,9 +52,11 @@ public struct AppUpdateAlertModifier: ViewModifier {
             set: { isPresenting in
                 if !isPresenting {
                     if case .forceUpdate = action {
-                        // ponytail: forceUpdate requires update action, alert cannot be dismissed
+                        // forceUpdate cannot be dismissed by clicking outside
                     } else {
+                        let prevAction = action
                         action = .none
+                        onEvent?(.userAction(action: prevAction, choice: .dismiss))
                         onDismiss?()
                     }
                 }
@@ -46,26 +71,32 @@ public struct AppUpdateAlertModifier: ViewModifier {
                 case .none:
                     return Alert(title: Text(""))
 
-                case .optionalUpdate(let title, let message, let storeURL):
+                case .optionalUpdate(let title, let message, let storeURL, _):
                     return Alert(
                         title: Text(title),
                         message: Text(message),
-                        primaryButton: .default(Text("Update")) {
+                        primaryButton: .default(Text(configuration.updateButtonTitle)) {
+                            let currentAction = action
+                            onEvent?(.userAction(action: currentAction, choice: .update(url: storeURL)))
                             openURL(storeURL)
                             action = .none
                             onDismiss?()
                         },
-                        secondaryButton: .cancel(Text("Later")) {
+                        secondaryButton: .cancel(Text(configuration.laterButtonTitle)) {
+                            let currentAction = action
+                            onEvent?(.userAction(action: currentAction, choice: .remindLater))
                             action = .none
                             onDismiss?()
                         }
                     )
 
-                case .forceUpdate(let title, let message, let storeURL):
+                case .forceUpdate(let title, let message, let storeURL, _):
                     return Alert(
                         title: Text(title),
                         message: Text(message),
-                        dismissButton: .default(Text("Update")) {
+                        dismissButton: .default(Text(configuration.updateButtonTitle)) {
+                            let currentAction = action
+                            onEvent?(.userAction(action: currentAction, choice: .update(url: storeURL)))
                             openURL(storeURL)
                         }
                     )
@@ -74,11 +105,18 @@ public struct AppUpdateAlertModifier: ViewModifier {
                     return Alert(
                         title: Text(title),
                         message: Text(message),
-                        dismissButton: .default(Text("OK")) {
+                        dismissButton: .default(Text(configuration.dismissButtonTitle)) {
+                            let currentAction = action
+                            onEvent?(.userAction(action: currentAction, choice: .dismiss))
                             action = .none
                             onDismiss?()
                         }
                     )
+                }
+            }
+            .onChange(of: action) { newAction in
+                if newAction != .none {
+                    onEvent?(.presented(action: newAction))
                 }
             }
     }
@@ -89,9 +127,18 @@ public extension View {
     /// Attaches an update alert driven by `AppUpdateAction`.
     func appUpdateAlert(
         action: Binding<AppUpdateAction>,
-        onDismiss: (() -> Void)? = nil
+        configuration: AppUpdateUIConfiguration = AppUpdateUIConfiguration(),
+        onDismiss: (() -> Void)? = nil,
+        onEvent: ((AppUpdateEvent) -> Void)? = nil
     ) -> some View {
-        modifier(AppUpdateAlertModifier(action: action, onDismiss: onDismiss))
+        modifier(
+            AppUpdateAlertModifier(
+                action: action,
+                configuration: configuration,
+                onDismiss: onDismiss,
+                onEvent: onEvent
+            )
+        )
     }
 }
 #endif

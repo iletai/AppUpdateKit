@@ -1,0 +1,55 @@
+{
+  "apiTitle": "App Update Config",
+  "endpoint": "app-update",
+  "fields": [
+    {
+      "id": "minimum_version",
+      "name": "Minimum Required Version",
+      "type": "text",
+      "required": false,
+      "description": "App version below this threshold will trigger mandatory Force Update (e.g. 1.0.0)"
+    },
+    {
+      "id": "latest_version",
+      "name": "Latest Available Version",
+      "type": "text",
+      "required": false,
+      "description": "Latest release version on App Store (e.g. 2.1.0)"
+    },
+    {
+      "id": "store_url",
+      "name": "App Store URL",
+      "type": "text",
+      "required": false,
+      "description": "Direct link to App Store or TestFlight"
+    },
+    {
+      "id": "is_maintenance",
+      "name": "Maintenance Mode",
+      "type": "boolean",
+      "required": true,
+      "description": "When true, blocks user access and shows maintenance notice"
+    },
+    {
+      "id": "title",
+      "name": "Dialog Title",
+      "type": "text",
+      "required": false,
+      "description": "Custom title for update or maintenance dialog"
+    },
+    {
+      "id": "message",
+      "name": "Dialog Message",
+      "type": "textArea",
+      "required": false,
+      "description": "Detailed explanation or release description"
+    },
+    {
+      "id": "release_notes",
+      "name": "Release Notes (What's New)",
+      "type": "textArea",
+      "required": false,
+      "description": "Bullet points or newline-separated changelog items"
+    }
+  ]
+}

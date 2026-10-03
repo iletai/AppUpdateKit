@@ -33,7 +33,8 @@ public enum AppUpdateChecker {
                 return .forceUpdate(
                     title: (title?.isEmpty == false) ? title! : "Update Required",
                     message: (message?.isEmpty == false) ? message! : "A new version of the app is available. Please update to continue.",
-                    storeURL: storeURL
+                    storeURL: storeURL,
+                    releaseNotes: config.releaseNotes
                 )
             }
         }
@@ -45,7 +46,8 @@ public enum AppUpdateChecker {
                 return .optionalUpdate(
                     title: (title?.isEmpty == false) ? title! : "Update Available",
                     message: (message?.isEmpty == false) ? message! : "A new version of the app is available. Would you like to update now?",
-                    storeURL: storeURL
+                    storeURL: storeURL,
+                    releaseNotes: config.releaseNotes
                 )
             }
         }
@@ -58,16 +60,23 @@ public enum AppUpdateChecker {
     public static func check(
         currentVersion: AppVersion = currentInstalledVersion(),
         defaultStoreURL: URL? = nil,
+        onEvent: (@Sendable (AppUpdateEvent) -> Void)? = nil,
         fetcher: () async throws -> AppUpdateConfig
     ) async -> AppUpdateAction {
+        onEvent?(.checkStarted)
         do {
             let config = try await fetcher()
-            return evaluate(
+            onEvent?(.configFetched(config: config))
+
+            let action = evaluate(
                 currentVersion: currentVersion,
                 config: config,
                 defaultStoreURL: defaultStoreURL
             )
+            onEvent?(.evaluated(action: action))
+            return action
         } catch {
+            onEvent?(.checkFailed(reason: error.localizedDescription))
             return .none
         }
     }
